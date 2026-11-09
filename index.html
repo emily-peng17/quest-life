@@ -38,7 +38,7 @@ input[type=range]{width:100%;accent-color:var(--g)}
 .done .t{text-decoration:line-through;color:var(--mut)}
 .tag{font-size:12px;color:var(--g);font-weight:700}
 input[type=checkbox]{width:20px;height:20px;accent-color:var(--g);flex:none}
-input[type=text],select,textarea{font:inherit;color:var(--ink);background:var(--well);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
+input[type=text],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--well);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
 .f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .f input[type=text]{grid-column:1/3}
 button,.btn{font:inherit;font-weight:800;padding:8px 14px;border-radius:8px;border:1px solid var(--g);background:var(--g);color:var(--onG);cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
@@ -50,6 +50,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .hp i{background:linear-gradient(90deg,#8A2F37,var(--red));box-shadow:0 0 8px #8A2F37}
 svg text{fill:var(--ink);font:700 11px Nunito,sans-serif}
 .won{opacity:.65}
+.hits{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hits button{padding:5px 10px;font-size:13px}
+button.bad{background:none;color:var(--red);border-color:var(--red)}
+.hits button[aria-pressed=true]{background:var(--g);color:var(--onG)}
+.lf{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.lf select{width:auto;flex:none}
+.lf input{flex:1 1 160px;width:auto;min-width:0}
 label.s{display:block;font-weight:800;margin:10px 0 4px}
 summary{cursor:pointer;font-weight:800;color:var(--g)}
 
@@ -110,7 +117,7 @@ const $=s=>document.querySelector(s);
 const AR=[['phys','Physical'],['intel','Intel'],['craft','Craft'],['wealth','Wealth'],['social','Social'],['spirit','Spiritual']];
 const AN=Object.fromEntries(AR);
 const EN=[['hp','HP'],['mood','Mood'],['conc','Concentration'],['mot','Motivation']];
-const blank=()=>({profile:null,xp:{},dx:{},en:{},quests:[],bosses:[],hl:{},avatar:'',t:0});
+const blank=()=>({profile:null,xp:{},dx:{},en:{},quests:[],bosses:[],hl:{},log:{},avatar:'',t:0});
 let S=blank(),acct=null,docRef=null,unsub=null,mode='loading',saving=false,dirty=false,saveT=null,status='saved',remoteWaiting=false,authTab='in',authMsg='',pendingCarry=null;
 const pad=n=>String(n).padStart(2,'0'),td=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -235,6 +242,33 @@ const award=(a,n)=>{S.xp[a]=Math.max(0,(S.xp[a]||0)+n);const d=td();S.dx[d]=Math
 const total=()=>AR.reduce((t,a)=>t+(S.xp[a[0]]||0),0);
 const lvOf=a=>Math.floor((S.xp[a]||0)/40);
 const rank=l=>l<5?'E':l<10?'D':l<20?'C':l<30?'B':l<40?'A':'S';
+
+/* Boss fights: pick how hard you hit based on the day you had. d = damage to the boss (negative heals it), x = XP you earn. */
+const HITS={light:{n:'Light hit',d:10,x:5},strong:{n:'Strong hit',d:25,x:15},crit:{n:'Critical hit',d:50,x:35},back:{n:'Boss strikes back',d:-15,x:0}};
+const SIZES=[[100,'Boss · 100 HP'],[200,'Big boss · 200 HP'],[400,'Final boss · 400 HP']];
+const DIFF=[[10,'Easy +10'],[25,'Medium +25'],[50,'Hard +50'],[100,'Epic +100']];
+const bmax=b=>b.max||100;
+
+/* Daily log: workouts, meals and anything else, kept by date so you can look back. */
+const LK=[['work','Workout'],['meal','Meal'],['note','Other']];
+const LKN=Object.fromEntries(LK);
+const dayLog=d=>(S.log&&S.log[d])||[];
+const nice=d=>new Date(d+'T12:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const hm=ts=>new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+const logRow=(e,d)=>`<div class="item"><span class="t"><span class="tag">${LKN[e.k]||'Other'}</span> ${esc(e.t)}</span><span class="meta">${hm(e.ts)}</span><button class="alt" data-a="rl" data-d="${d}" data-i="${e.id}" aria-label="Delete entry">×</button></div>`;
+let histDay=null;
+function past(){
+  const today=td();
+  const days=[...new Set([...Object.keys(S.log||{}).filter(k=>dayLog(k).length),...Object.keys(S.dx).filter(k=>S.dx[k]>0),...Object.keys(S.hl).filter(k=>S.hl[k].length)])].filter(k=>k<today).sort().reverse().slice(0,10);
+  const D=histDay||days[0]||'';
+  let body='';
+  if(D){
+    const L=dayLog(D),done=(S.hl[D]||[]).map(id=>S.quests.find(q=>q.id===id)).filter(Boolean),en=S.en[D];
+    body=`<h3 style="margin:10px 0 4px;font-size:15px">${nice(D)}</h3><p class="meta">${S.dx[D]||0} XP earned${en?' · '+EN.map(e=>`${e[1]} ${en[e[0]]??'–'}`).join(' · '):''}</p>${done.length?`<p class="meta">Daily quests done: ${done.map(q=>esc(q.t)).join(', ')}</p>`:''}${L.map(e=>logRow(e,D)).join('')||'<p class="meta">Nothing logged this day.</p>'}`;
+  }
+  return`<details ${histDay?'open':''}><summary>Look back at past days</summary>${days.length?`<div class="hits">${days.map(k=>`<button class="alt" data-a="hd" data-d="${k}" aria-pressed="${k===D}">${nice(k)}</button>`).join('')}</div>`:''}<p style="margin:10px 0 0"><label class="meta" for="hd">Or pick a date</label><input type="date" id="hd" max="${today}" value="${D}"></p>${body||'<p class="meta">Your past days will show up here.</p>'}</details>`;
+}
+
 function radar(){
   const mx=Math.max(5,...AR.map(a=>lvOf(a[0]))),C=150,R=92;
   const pt=(i,r)=>{const g=-Math.PI/2+i*Math.PI/3;return[C+Math.cos(g)*R*r,C+Math.sin(g)*R*r]};
@@ -258,7 +292,13 @@ function line(){
 }
 const opts=()=>AR.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
 let editId=null,confirmReset=false;
-const editForm=q=>`<form class="item" data-ef="${q.id}" style="display:block"><div class="f"><input type="text" name="t" required maxlength="80" value="${esc(q.t)}" aria-label="Quest name"><select name="a" aria-label="Area">${AR.map(a=>`<option value="${a[0]}" ${a[0]===q.a?'selected':''}>${a[1]}</option>`).join('')}</select><select name="x" aria-label="Difficulty">${[[10,'Easy +10'],[25,'Medium +25'],[50,'Hard +50']].map(o=>`<option value="${o[0]}" ${o[0]===q.xp?'selected':''}>${o[1]}</option>`).join('')}</select></div><p><label><input type="checkbox" name="d" ${q.daily?'checked':''}> Repeats daily</label></p><button>Save</button> <button type="button" class="alt" data-a="ec">Cancel</button></form>`;
+const editForm=q=>`<form class="item" data-ef="${q.id}" style="display:block"><div class="f"><input type="text" name="t" required maxlength="80" value="${esc(q.t)}" aria-label="Quest name"><select name="a" aria-label="Area">${AR.map(a=>`<option value="${a[0]}" ${a[0]===q.a?'selected':''}>${a[1]}</option>`).join('')}</select><select name="x" aria-label="Difficulty">${DIFF.map(o=>`<option value="${o[0]}" ${o[0]===q.xp?'selected':''}>${o[1]}</option>`).join('')}</select></div><p><label><input type="checkbox" name="d" ${q.daily?'checked':''}> Repeats daily</label></p><button>Save</button> <button type="button" class="alt" data-a="ec">Cancel</button></form>`;
+function bossCard(b){
+  const mx=bmax(b),canUndo=(b.log&&b.log.length)||b.hp<mx;
+  const hits=b.won?'':Object.entries(HITS).map(([k,h])=>`<button class="${k==='back'?'alt bad':k==='light'?'alt':''}" data-a="hit" data-k="${k}" data-i="${b.id}">${h.n} ${h.d>0?`−${h.d} HP · +${h.x} XP`:`+${-h.d} HP`}</button>`).join('');
+  return`<div class="item ${b.won?'won':''}" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b style="min-width:0;overflow-wrap:anywhere">${b.won?'🏆':'👹'} ${esc(b.n)}</b><span class="tag">${AN[b.a]}</span></div>${b.note?`<p class="meta">${esc(b.note)}</p>`:''}<div class="bar hp"><i style="width:${b.hp/mx*100}%"></i></div><span class="meta">${b.won?`Defeated! +${mx} XP bonus`:`${b.hp} / ${mx} HP`}</span>
+  <div class="hits">${hits}${canUndo?`<button class="alt" data-a="un" data-i="${b.id}">Undo</button>`:''}<button class="alt" data-a="rb" data-i="${b.id}" aria-label="Delete boss">×</button></div></div>`;
+}
 function setup(){
   const p=S.profile||{name:'',values:['','',''],purpose:''};
   $('#app').innerHTML=`${acctBar()}<h1>${S.profile?'Edit character':'Create your character'}</h1><form class="p" id="pf" style="max-width:520px;margin:auto">
@@ -279,7 +319,7 @@ function render(){
   const P=S.profile,tot=total(),lv=1+Math.floor(tot/100),d=td(),hl=S.hl[d]||[],en=S.en[d]||{},tx=S.dx[d]||0;
   const daily=S.quests.filter(q=>q.daily),one=S.quests.filter(q=>!q.daily),mxx=Math.max(100,...AR.map(a=>S.xp[a[0]]||0));
   const row=(q,done)=>q.id===editId?editForm(q):`<div class="item ${done?'done':''}"><input type="checkbox" data-a="tg" data-i="${q.id}" ${done?'checked':''} aria-label="${esc(q.t)}"><span class="t">${esc(q.t)} <span class="tag">+${q.xp} · ${AN[q.a]}</span></span><button class="alt" data-a="ed" data-i="${q.id}" aria-label="Edit ${esc(q.t)}">Edit</button> <button class="alt" data-a="rm" data-i="${q.id}" aria-label="Delete ${esc(q.t)}">×</button></div>`;
-  const bosses=S.bosses.map(b=>`<div class="item ${b.won?'won':''}" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b style="min-width:0;overflow-wrap:anywhere">${b.won?'🏆':'👹'} ${esc(b.n)}</b><span class="tag">${AN[b.a]}</span></div>${b.note?`<p class="meta">${esc(b.note)}</p>`:''}<div class="bar hp"><i style="width:${b.hp}%"></i></div><span class="meta">${b.won?'Defeated! +100 XP bonus':b.hp+' / 100 HP'}</span> ${b.won?'':`<button data-a="hit" data-i="${b.id}">Hit +15 XP</button>`} ${b.hp<100?`<button class="alt" data-a="un" data-i="${b.id}">Undo hit</button>`:''} <button class="alt" data-a="rb" data-i="${b.id}" aria-label="Delete boss">×</button></div>`).join('');
+  const bosses=S.bosses.map(bossCard).join('');
   $('#app').innerHTML=`${acctBar()}<div class="cols">
   <div>
    <section class="p"><div class="lvl"><span>LEVEL ${lv}</span><span class="rank">${rank(lv)}-Rank</span></div>
@@ -291,14 +331,16 @@ function render(){
   <div style="min-width:0">
    <section class="p"><h1>${esc(P.name)}</h1>${P.purpose?`<p style="text-align:center;font-style:italic">“${esc(P.purpose)}”</p>`:''}<div class="chips" style="justify-content:center;margin-bottom:10px">${P.values.map(v=>`<span class="chip">${esc(v)}</span>`).join('')}</div>${radar()}</section>
    <section class="p"><h2>${new Date().toLocaleString('en-US',{month:'long'})}: daily XP</h2>${line()}</section>
-   <section class="p"><h2>Choose your pursuits</h2><h3 style="margin:0 0 6px;font-size:15px">Boss fights</h3>${bosses||'<p class="meta">Pick a big challenge, like an exam or a bad habit, and take it down hit by hit.</p>'}
-    <form id="bf"><div class="f"><input type="text" id="bt" required maxlength="60" placeholder="Boss name, e.g. ISYE midterm" aria-label="Boss name"><select id="ba" aria-label="Area">${opts()}</select><input type="text" id="bn" maxlength="120" placeholder="What does beating it look like?" aria-label="Challenge note"></div><p><button>Summon boss</button></p></form></section>
+   <section class="p"><h2>Daily log</h2><p class="meta">Workouts, meals, anything you want to remember about today.</p>${dayLog(d).map(e=>logRow(e,d)).join('')}
+    <form id="lf" class="lf"><select id="lk" aria-label="Entry type">${LK.map(k=>`<option value="${k[0]}">${k[1]}</option>`).join('')}</select><input type="text" id="lt" required maxlength="140" placeholder="e.g. 3 mi run + 50 push-ups" aria-label="What you did"><button>Log it</button></form>${past()}</section>
+   <section class="p"><h2>Choose your pursuits</h2><h3 style="margin:0 0 6px;font-size:15px">Boss fights</h3>${bosses?`<p class="meta">Hit harder on big study days. On a rough day, let the boss strike back.</p>${bosses}`:'<p class="meta">Pick a big challenge, like an exam or a bad habit, and take it down hit by hit.</p>'}
+    <form id="bf"><div class="f"><input type="text" id="bt" required maxlength="60" placeholder="Boss name, e.g. ISYE midterm" aria-label="Boss name"><select id="ba" aria-label="Area">${opts()}</select><select id="bs" aria-label="Boss size">${SIZES.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('')}</select><input type="text" id="bn" maxlength="120" placeholder="What does beating it look like?" aria-label="Challenge note"></div><p><button>Summon boss</button></p></form></section>
   </div>
   <div>
    <section class="p"><h2>XP: ${tot}</h2><p class="meta">To reach level ${lv+1}, earn ${100-tot%100} more XP.</p><p class="big">${tx} <span style="font-size:16px;color:var(--mut)">XP today</span></p><div class="bar"><i style="width:${Math.min(100,tx/30*100)}%"></i></div><p class="meta">Daily goal: 30 XP</p></section>
    <section class="p"><h2>Today’s mission</h2>${daily.map(q=>row(q,hl.includes(q.id))).join('')||'<p class="meta">Add a quest and tick “repeats daily”.</p>'}</section>
    <section class="p"><h2>Quests</h2>${one.map(q=>row(q,q.done)).join('')||'<p class="meta">Turn a goal into a quest. Finish it to earn XP.</p>'}
-    <form id="qf"><div class="f"><input type="text" id="qt" required maxlength="80" placeholder="e.g. Apply to Create-X" aria-label="Quest name"><select id="qa" aria-label="Area">${opts()}</select><select id="qx" aria-label="Difficulty"><option value="10">Easy +10</option><option value="25">Medium +25</option><option value="50">Hard +50</option></select></div>
+    <form id="qf"><div class="f"><input type="text" id="qt" required maxlength="80" placeholder="e.g. Apply to Create-X" aria-label="Quest name"><select id="qa" aria-label="Area">${opts()}</select><select id="qx" aria-label="Difficulty">${DIFF.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('')}</select></div>
     <p><label><input type="checkbox" id="qd"> Repeats daily</label></p><button>Add quest</button></form></section>
    <details class="p" id="set" ${confirmReset?'open':''}><summary>Settings</summary>
     <p><button class="alt" id="ep">Edit character</button> ${confirmReset?'':'<button class="alt" id="rs">Reset all</button>'}</p>
@@ -307,7 +349,8 @@ function render(){
   </div></div>`;
   setStatus(mode==='cloud'?status:'local');wireBar();
   $('#qf').onsubmit=e=>{e.preventDefault();S.quests.push({id:mkid(),t:$('#qt').value.trim(),a:$('#qa').value,xp:+$('#qx').value,daily:$('#qd').checked?1:0});persist();render()};
-  $('#bf').onsubmit=e=>{e.preventDefault();S.bosses.push({id:mkid(),n:$('#bt').value.trim(),a:$('#ba').value,note:$('#bn').value.trim(),hp:100});persist();render()};
+  $('#bf').onsubmit=e=>{e.preventDefault();const mx=+$('#bs').value;S.bosses.push({id:mkid(),n:$('#bt').value.trim(),a:$('#ba').value,note:$('#bn').value.trim(),hp:mx,max:mx,log:[]});persist();render()};
+  $('#lf').onsubmit=e=>{e.preventDefault();const L=(S.log=S.log||{})[d]=S.log[d]||[];L.push({id:mkid(),k:$('#lk').value,t:$('#lt').value.trim(),ts:Date.now()});persist();render();$('#lt').focus()};
   $('#ep').onclick=setup;
   if($('#rs'))$('#rs').onclick=()=>{confirmReset=true;render()};
   if($('#rsn'))$('#rsn').onclick=()=>{confirmReset=false;render()};
@@ -317,7 +360,7 @@ function render(){
 }
 const app=$('#app');
 app.addEventListener('input',e=>{const k=e.target.dataset.en;if(!k)return;const d=td();(S.en[d]=S.en[d]||{})[k]=+e.target.value;$('#ev-'+k).textContent=e.target.value});
-app.addEventListener('change',e=>{if(e.target.dataset.en)persist()});
+app.addEventListener('change',e=>{if(e.target.dataset.en)persist();else if(e.target.id==='hd'&&e.target.value){histDay=e.target.value;render()}});
 app.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,i=b.dataset.i,d=td();
   const q=S.quests.find(x=>x.id===i),bo=S.bosses.find(x=>x.id===i);
@@ -325,8 +368,21 @@ app.addEventListener('click',e=>{
   else if(a==='rm'){S.quests=S.quests.filter(x=>x.id!==i)}
   else if(a==='ed'){editId=i;render();return}
   else if(a==='ec'){editId=null;render();return}
-  else if(a==='hit'&&bo){bo.hp=Math.max(0,bo.hp-20);award(bo.a,15);if(bo.hp===0&&!bo.won){bo.won=true;award(bo.a,100)}}
-  else if(a==='un'&&bo&&bo.hp<100){if(bo.won){bo.won=false;award(bo.a,-100)}bo.hp=Math.min(100,bo.hp+20);award(bo.a,-15)}
+  else if(a==='hit'&&bo&&!bo.won&&HITS[b.dataset.k]){
+    const h=HITS[b.dataset.k],mx=bmax(bo),entry={hp:bo.hp,x:h.x,bonus:0};
+    bo.hp=Math.min(mx,Math.max(0,bo.hp-h.d));award(bo.a,h.x);
+    if(bo.hp===0){bo.won=true;entry.bonus=mx;award(bo.a,mx)}
+    (bo.log=bo.log||[]).push(entry);if(bo.log.length>50)bo.log.shift();
+  }
+  else if(a==='un'&&bo){
+    const mx=bmax(bo);
+    /* bosses made before this update have no hit history, so fall back to the old fixed hit (20 HP, 15 XP) */
+    const entry=bo.log&&bo.log.length?bo.log.pop():bo.hp<mx?{hp:Math.min(mx,bo.hp+20),x:15,bonus:bo.won?100:0}:null;
+    if(!entry)return;
+    bo.hp=entry.hp;award(bo.a,-entry.x);if(entry.bonus){bo.won=false;award(bo.a,-entry.bonus)}
+  }
+  else if(a==='rl'){const L=S.log&&S.log[b.dataset.d];if(L)S.log[b.dataset.d]=L.filter(x=>x.id!==i)}
+  else if(a==='hd'){histDay=b.dataset.d;render();return}
   else if(a==='rb'){S.bosses=S.bosses.filter(x=>x.id!==i)}
   else return;
   persist();render();
