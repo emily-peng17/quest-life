@@ -322,12 +322,12 @@ function render(){
     <div class="av" id="av" tabindex="0" role="button" aria-label="Upload your portrait">${S.avatar?`<img src="${S.avatar}" alt="Your portrait">`:'<span>✦<br>Tap to add your portrait</span>'}</div>
     <input type="file" id="fi" accept="image/*" hidden></section>
    <section class="p"><h2>Stats</h2>${AR.map(a=>`<div class="st"><span>${a[1]}</span><span>${S.xp[a[0]]||0} XP</span><div class="bar"><i style="width:${Math.min(100,(S.xp[a[0]]||0)/mxx*100)}%"></i></div></div>`).join('')}<p class="meta">Sum XP ${tot}</p></section>
+   <section class="p"><h2>Daily log</h2><p class="meta">Workouts, meals, anything you want to remember about today.</p>${dayLog(d).map(e=>logRow(e,d)).join('')}
+    <form id="lf" class="lf"><select id="lk" aria-label="Entry type">${LK.map(k=>`<option value="${k[0]}">${k[1]}</option>`).join('')}</select><input type="text" id="lt" required maxlength="140" placeholder="e.g. 3 mi run + 50 push-ups" aria-label="What you did"><button>Log it</button></form>${past()}</section>
   </div>
   <div style="min-width:0">
    <section class="p"><h1>${esc(P.name)}</h1>${P.purpose?`<p style="text-align:center;font-style:italic">“${esc(P.purpose)}”</p>`:''}<div class="chips" style="justify-content:center;margin-bottom:10px">${P.values.map(v=>`<span class="chip">${esc(v)}</span>`).join('')}</div>${radar()}</section>
    <section class="p"><h2>${new Date().toLocaleString('en-US',{month:'long'})}: daily XP</h2>${line()}</section>
-   <section class="p"><h2>Daily log</h2><p class="meta">Workouts, meals, anything you want to remember about today.</p>${dayLog(d).map(e=>logRow(e,d)).join('')}
-    <form id="lf" class="lf"><select id="lk" aria-label="Entry type">${LK.map(k=>`<option value="${k[0]}">${k[1]}</option>`).join('')}</select><input type="text" id="lt" required maxlength="140" placeholder="e.g. 3 mi run + 50 push-ups" aria-label="What you did"><button>Log it</button></form>${past()}</section>
    <section class="p"><h2>Choose your pursuits</h2><h3 style="margin:0 0 6px;font-size:15px">Boss fights</h3>${bosses?`<p class="meta">Hit harder on big study days. On a rough day, let the boss strike back.</p>${bosses}`:'<p class="meta">Pick a big challenge, like an exam or a bad habit, and take it down hit by hit.</p>'}
     <form id="bf"><div class="f"><input type="text" id="bt" required maxlength="60" placeholder="Boss name, e.g. ISYE midterm" aria-label="Boss name"><select id="ba" aria-label="Area">${opts()}</select><select id="bs" aria-label="Boss size">${SIZES.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('')}</select><input type="text" id="bn" maxlength="120" placeholder="What does beating it look like?" aria-label="Challenge note"></div><p><button>Summon boss</button></p></form></section>
   </div>
