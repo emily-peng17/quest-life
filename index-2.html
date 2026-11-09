@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1310">
+<title>Quest Life</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600;1,700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* Layout: three-column character sheet (portrait + stats | identity + charts | XP + quests), one column on phones. Single dark look by design. */
+:root{--bg:#0E1310;--panel:#141B16;--line:#26352B;--ink:#DDE8DF;--mut:#7F9487;--g:#7BD389;--g2:#3E7A4B;--red:#E0626B;--gold:#E3C770;--well:#0B100D;--glow:#1B2A20;--onG:#0B140E;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:radial-gradient(1200px 600px at 50% -10%,var(--glow),var(--bg));background-color:var(--bg);color:var(--ink);font:15px/1.5 Nunito,system-ui,sans-serif;min-height:100vh}
+main{max-width:1180px;margin:0 auto;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.cols{display:grid;grid-template-columns:260px minmax(0,1fr) 310px;gap:16px;align-items:start}
+@media(max-width:940px){.cols{grid-template-columns:minmax(0,1fr)}}
+.p{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px}
+h1,h2{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:700;color:var(--g);margin:0 0 10px;text-wrap:balance}
+h1{font-size:34px;text-align:center}
+h2{font-size:22px}
+.lvl{display:flex;justify-content:space-between;font-weight:800;color:var(--g);margin-bottom:8px}
+.rank{color:var(--gold)}
+.av{width:100%;max-width:100%;aspect-ratio:3/4;border-radius:8px;border:1px solid var(--line);background:linear-gradient(160deg,#1E3325,#0C120E);display:grid;place-items:center;overflow:hidden;cursor:pointer;color:var(--mut);text-align:center;padding:10px}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.bar{height:10px;border-radius:5px;background:var(--well);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--g2),var(--g));box-shadow:0 0 8px var(--g2)}
+.meta{color:var(--mut);font-size:13px;margin:4px 0}
+.en{margin:10px 0}
+.en label{display:flex;justify-content:space-between;font-weight:700;font-size:14px}
+input[type=range]{width:100%;accent-color:var(--g)}
+.st{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin:8px 0;font-weight:700;font-variant-numeric:tabular-nums}
+.st .bar{grid-column:1/3;height:6px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--g2);color:var(--g);padding:0 9px;border-radius:12px;font-weight:700;font-size:13px}
+.item{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.item .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.done .t{text-decoration:line-through;color:var(--mut)}
+.tag{font-size:12px;color:var(--g);font-weight:700}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--g);flex:none}
+input[type=text],select,textarea{font:inherit;color:var(--ink);background:var(--well);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.f input[type=text]{grid-column:1/3}
+button,.btn{font:inherit;font-weight:800;padding:8px 14px;border-radius:8px;border:1px solid var(--g);background:var(--g);color:var(--onG);cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+button.alt,.btn.alt{background:none;color:var(--g);padding:3px 9px}
+button:hover,.btn:hover{filter:brightness(1.1)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible,.av:focus-visible,.btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.big{font-size:32px;font-weight:800;color:var(--g);text-align:center;margin:0;font-variant-numeric:tabular-nums}
+.hp{height:12px;margin:6px 0}
+.hp i{background:linear-gradient(90deg,#8A2F37,var(--red));box-shadow:0 0 8px #8A2F37}
+svg text{fill:var(--ink);font:700 11px Nunito,sans-serif}
+.won{opacity:.65}
+label.s{display:block;font-weight:800;margin:10px 0 4px}
+summary{cursor:pointer;font-weight:800;color:var(--g)}
+
+/* account strip */
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.acct img{width:28px;height:28px;border-radius:50%;flex:none}
+.acct .who{font-weight:800;min-width:0;overflow-wrap:anywhere}
+.acct .sv{margin-left:auto;font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g2)}
+.dot.busy{background:var(--gold);box-shadow:none}
+.dot.bad{background:var(--red);box-shadow:none}
+
+/* sign-in gate */
+input[type=password]{font:inherit;color:var(--ink);background:var(--well);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--well);margin-bottom:6px}
+.tabs button{background:none;border-color:transparent;color:var(--mut)}
+.tabs button[aria-selected=true]{background:var(--g);color:var(--onG)}
+.chk{display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px}
+.err{color:var(--red);font-weight:700;font-size:14px;margin:0;min-height:1em}
+.err:empty{display:none}
+button:disabled{opacity:.6;cursor:progress}
+.gate{max-width:440px;margin:6vh auto 0;text-align:center}
+.crest{width:72px;height:72px;margin:0 auto 6px;display:block}
+.gate .p{text-align:left;padding:22px}
+.gate .lede{color:var(--mut);margin:0 0 18px}
+.stack{display:grid;gap:10px}
+.idcard{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--well);margin-bottom:14px}
+.idcard img{width:44px;height:44px;border-radius:50%}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--g);animation:sp 1s linear infinite;margin:6px auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.note{font-size:13px;color:var(--mut);border-top:1px solid var(--line);padding-top:12px;margin:16px 0 0}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut as fbSignOut,setPersistence,browserLocalPersistence,browserSessionPersistence} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {getFirestore,doc as fdoc,getDoc,setDoc,onSnapshot} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+/* ====== PASTE YOUR FIREBASE SETTINGS HERE (see SETUP.md, step 4) ====== */
+const firebaseConfig = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId: "PASTE_APP_ID"
+};
+/* ====================================================================== */
+
+const configured=!String(firebaseConfig.apiKey).startsWith('PASTE');
+let auth=null,fs=null;
+if(configured){const app=initializeApp(firebaseConfig);auth=getAuth(app);fs=getFirestore(app)}
+
+const $=s=>document.querySelector(s);
+const AR=[['phys','Physical'],['intel','Intel'],['craft','Craft'],['wealth','Wealth'],['social','Social'],['spirit','Spiritual']];
+const AN=Object.fromEntries(AR);
+const EN=[['hp','HP'],['mood','Mood'],['conc','Concentration'],['mot','Motivation']];
+const blank=()=>({profile:null,xp:{},dx:{},en:{},quests:[],bosses:[],hl:{},avatar:'',t:0});
+let S=blank(),acct=null,docRef=null,unsub=null,mode='loading',saving=false,dirty=false,saveT=null,status='saved',remoteWaiting=false,authTab='in',authMsg='',pendingCarry=null;
+const pad=n=>String(n).padStart(2,'0'),td=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mkid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+
+/* Usernames are turned into a stand-in email address behind the scenes, because Firebase signs people in by email. No email is ever sent. */
+const DOMAIN='players.example.com';
+const normName=u=>u.trim().toLowerCase();
+const validName=u=>/^[a-z0-9_.-]{3,24}$/.test(u)&&!/^[.]|[.]$|\.\./.test(u);
+const toEmail=u=>u+'@'+DOMAIN;
+const nameOf=user=>(user.email||'').split('@')[0];
+
+/* ---------- saving ---------- */
+const STAT={saved:['','Saved to your account'],saving:['busy','Saving…'],error:['bad','Couldn’t reach the save server. Keep this page open and it will save when you’re back online.'],denied:['bad','The save server refused this save. Check step 5 of SETUP.md (security rules).'],local:['busy','Saved in this browser only']};
+function setStatus(s){status=s;const el=$('#sv');if(el){const[c,t]=STAT[s];el.innerHTML=`<span class="dot ${c}"></span><span></span>`;el.lastChild.textContent=t}}
+function persist(){S.t=Date.now();if(mode==='local'){lsSet('questlife.local',JSON.stringify(S));return}if(!docRef)return;dirty=true;setStatus('saving');clearTimeout(saveT);saveT=setTimeout(flush,400)}
+async function flush(){
+  if(saving||!dirty||!docRef)return;saving=true;dirty=false;
+  try{await setDoc(docRef,{username:acct,t:S.t,json:JSON.stringify(S)})}
+  catch(e){saving=false;dirty=true;setStatus(e&&e.code==='permission-denied'?'denied':'error');setTimeout(()=>{if(dirty)flush()},5000);return}
+  saving=false;
+  if(dirty)flush();else setStatus('saved');
+}
+window.addEventListener('online',()=>{if(dirty)flush()});
+window.addEventListener('beforeunload',e=>{if(dirty||saving){e.preventDefault();e.returnValue=''}});
+
+/* ---------- accounts ---------- */
+async function loadAccount(user){
+  acct=nameOf(user);docRef=fdoc(fs,'saves',user.uid);
+  gate('loading');
+  let cloud=null;
+  try{const sn=await getDoc(docRef);if(sn.exists())cloud=JSON.parse(sn.data().json)}catch(e){}
+  S=cloud||pendingCarry||blank();
+  const fresh=!cloud;pendingCarry=null;
+  if(fresh&&S.profile)lsSet('questlife.local',null);
+  mode='cloud';render();setStatus('saved');
+  if(fresh&&S.profile){dirty=true;flush()}
+  if(unsub)unsub();
+  unsub=onSnapshot(docRef,sn=>{
+    if(sn.metadata.hasPendingWrites||!sn.exists())return;
+    let r;try{r=JSON.parse(sn.data().json)}catch(e){return}
+    if((r.t||0)<=(S.t||0))return;
+    S=r;if(busyEditing())remoteWaiting=true;else render();
+  },()=>{});
+}
+async function signOut(){if(unsub)unsub();unsub=null;if(dirty)await flush();await fbSignOut(auth);acct=docRef=null;S=blank();authMsg='You’re signed out.';authTab='in';gate('auth')}
+function localSave(){for(const k of ['questlife.local','questlife.v2']){try{const r=JSON.parse(lsGet(k));if(r&&r.profile)return r}catch(e){}}return null}
+function authError(e){
+  const c=e&&e.code||'';
+  if(/invalid-credential|wrong-password|user-not-found|invalid-email/.test(c))return'That username and password don’t match an account.';
+  if(c.includes('email-already-in-use'))return'That username is taken. Try another one.';
+  if(c.includes('weak-password'))return'Use at least 8 characters for your password.';
+  if(c.includes('too-many-requests'))return'Too many tries. Wait a few minutes and try again.';
+  if(c.includes('network-request-failed'))return'Couldn’t reach the server. Check your connection and try again.';
+  if(c.includes('operation-not-allowed'))return'Accounts aren’t switched on yet. See step 3 of SETUP.md.';
+  if(c.includes('unauthorized-domain'))return'This web address isn’t approved yet. See step 7 of SETUP.md.';
+  return'Something went wrong ('+c+'). Try again.';
+}
+
+/* ---------- sign-in page ---------- */
+const crest=`<svg class="crest" viewBox="0 0 72 72" aria-hidden="true"><path d="M36 4 62 14v20c0 17-11 28-26 34C21 62 10 51 10 34V14Z" fill="none" stroke="#7BD389" stroke-width="2.5"/><path d="M36 20l4.5 9.2 10.1 1.5-7.3 7.1 1.7 10-9-4.7-9 4.7 1.7-10-7.3-7.1 10.1-1.5Z" fill="#E3C770"/></svg>`;
+function gate(kind){
+  mode=kind;
+  let body;
+  if(kind==='loading')body=`<div class="spin" role="status" aria-label="Loading"></div><p class="lede" style="text-align:center">Opening the guild hall…</p>`;
+  else if(kind==='setup')body=`<p class="lede">Accounts aren’t connected yet. Paste your Firebase settings into the top of this file (step 4 of SETUP.md), then reload.</p><div class="stack"><button id="dev">Play in this browser only</button></div>`;
+  else{
+    const c=authTab==='up',carry=c&&localSave();
+    body=`<div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="${!c}" data-tab="in">Sign in</button><button type="button" role="tab" aria-selected="${c}" data-tab="up">Create account</button></div>
+    <form id="af" class="stack" autocomplete="on">
+      <div><label class="s" for="au">Username</label><input type="text" id="au" name="username" autocomplete="username" required minlength="3" maxlength="24" autocapitalize="none" spellcheck="false" placeholder="e.g. emily_p"></div>
+      <div><label class="s" for="ap">Password</label><input type="password" id="ap" name="password" autocomplete="${c?'new-password':'current-password'}" required minlength="${c?8:1}"></div>
+      ${c?'<div><label class="s" for="ap2">Confirm password</label><input type="password" id="ap2" autocomplete="new-password" required minlength="8"></div>':''}
+      <label class="chk"><input type="checkbox" id="ar" checked> Keep me signed in on this device</label>
+      ${carry?`<label class="chk"><input type="checkbox" id="ac" checked> Bring in the character already saved in this browser (${esc(carry.profile.name)})</label>`:''}
+      <p class="err" id="am" role="alert">${esc(authMsg)}</p>
+      <button id="ago">${c?'Create account':'Sign in'}</button>
+    </form>
+    <p class="note">${c?'Usernames are 3–24 letters, numbers, dots, dashes or underscores. Passwords need at least 8 characters. <b>Write your password down:</b> accounts have no email attached, so a forgotten password can’t be reset from this page.':'Sign in with your Quest Life username and password on any phone or computer.'}</p>
+    <p style="text-align:center;margin:10px 0 0"><button class="alt" id="dev">Play in this browser without an account</button></p>`;
+  }
+  $('#app').innerHTML=`<div class="gate">${crest}<h1>Quest Life</h1><section class="p">${body}</section></div>`;
+  const dv=$('#dev');if(dv)dv.onclick=()=>{mode='local';S=localSave()||blank();render()};
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{authTab=b.dataset.tab;authMsg='';gate('auth');$('#au').focus()});
+  const af=$('#af');if(!af)return;
+  af.onsubmit=async e=>{
+    e.preventDefault();const m=$('#am'),go=$('#ago'),u=normName($('#au').value),pw=$('#ap').value,rem=$('#ar').checked;
+    m.textContent='';
+    if(!validName(u)){m.textContent='Usernames are 3–24 characters: letters, numbers, dots, dashes or underscores.';return}
+    if(authTab==='up'){
+      if(pw.length<8){m.textContent='Use at least 8 characters for your password.';return}
+      if(pw!==$('#ap2').value){m.textContent='The two passwords don’t match.';return}
+    }
+    go.disabled=true;go.textContent=authTab==='up'?'Creating…':'Signing in…';
+    try{
+      await setPersistence(auth,rem?browserLocalPersistence:browserSessionPersistence);
+      if(authTab==='up'){pendingCarry=$('#ac')&&$('#ac').checked?localSave():null;await createUserWithEmailAndPassword(auth,toEmail(u),pw)}
+      else await signInWithEmailAndPassword(auth,toEmail(u),pw);
+      authMsg='';
+    }catch(x){pendingCarry=null;m.textContent=authError(x);go.disabled=false;go.textContent=authTab==='up'?'Create account':'Sign in'}
+  };
+}
+
+function boot(){
+  if(!configured)return gate('setup');
+  gate('loading');
+  onAuthStateChanged(auth,user=>{if(user)loadAccount(user);else if(mode==='loading')gate('auth')});
+}
+const busyEditing=()=>{const a=document.activeElement;return editId!==null||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=='checkbox'&&a.type!=='range')||!S.profile};
+document.addEventListener('focusout',()=>setTimeout(()=>{if(remoteWaiting&&!busyEditing()){remoteWaiting=false;render()}},0));
+
+function acctBar(){
+  if(mode==='cloud')return`<div class="acct"><span class="who">Signed in as @${esc(acct)}</span><span class="sv" id="sv" aria-live="polite"></span><button class="alt" id="so">Sign out</button></div>`;
+  return`<div class="acct"><span class="who">Playing without an account</span><span class="sv" id="sv" aria-live="polite"></span>${configured?'<button class="alt" id="si">Sign in or create account</button>':''}</div>`;
+}
+function wireBar(){const so=$('#so');if(so)so.onclick=signOut;const si=$('#si');if(si)si.onclick=()=>{authTab=localSave()?'up':'in';authMsg='';gate('auth')}}
+
+/* ---------- game ---------- */
+const award=(a,n)=>{S.xp[a]=Math.max(0,(S.xp[a]||0)+n);const d=td();S.dx[d]=Math.max(0,(S.dx[d]||0)+n)};
+const total=()=>AR.reduce((t,a)=>t+(S.xp[a[0]]||0),0);
+const lvOf=a=>Math.floor((S.xp[a]||0)/40);
+const rank=l=>l<5?'E':l<10?'D':l<20?'C':l<30?'B':l<40?'A':'S';
+function radar(){
+  const mx=Math.max(5,...AR.map(a=>lvOf(a[0]))),C=150,R=92;
+  const pt=(i,r)=>{const g=-Math.PI/2+i*Math.PI/3;return[C+Math.cos(g)*R*r,C+Math.sin(g)*R*r]};
+  const ring=r=>AR.map((_,i)=>pt(i,r).join(',')).join(' ');
+  const poly=AR.map((a,i)=>pt(i,Math.max(.05,lvOf(a[0])/mx)).join(',')).join(' ');
+  return`<svg viewBox="0 0 300 300" style="width:100%;max-width:380px;display:block;margin:0 auto" role="img" aria-label="Radar chart of your six areas">
+  ${[.25,.5,.75,1].map(r=>`<polygon points="${ring(r)}" fill="none" stroke="#2C4033"/>`).join('')}
+  ${AR.map((_,i)=>`<line x1="${C}" y1="${C}" x2="${pt(i,1)[0]}" y2="${pt(i,1)[1]}" stroke="#2C4033"/>`).join('')}
+  <polygon points="${poly}" fill="#7BD389" fill-opacity=".28" stroke="#7BD389" stroke-width="2.5" style="filter:drop-shadow(0 0 6px #3E7A4B)"/>
+  ${AR.map((a,i)=>{const[x,y]=pt(i,1.25);return`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle">${a[1]} ${lvOf(a[0])}</text>`}).join('')}</svg>`;
+}
+function line(){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth(),dim=new Date(y,m+1,0).getDate();
+  const v=[...Array(dim)].map((_,i)=>S.dx[y+'-'+pad(m+1)+'-'+pad(i+1)]||0),mx=Math.max(10,...v);
+  const pts=v.map((x,i)=>[24+i/(dim-1)*266,100-x/mx*85]);
+  return`<svg viewBox="0 0 300 130" style="width:100%" role="img" aria-label="Daily XP this month"><line x1="24" y1="100" x2="290" y2="100" stroke="#2C4033"/><line x1="24" y1="15" x2="24" y2="100" stroke="#2C4033"/>
+  <text x="2" y="18">${mx}</text><text x="10" y="102">0</text>
+  <path d="M${pts.map(p=>p.join(',')).join('L')}" fill="none" stroke="#7BD389" stroke-width="2"/>
+  ${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2" fill="#7BD389"/>`).join('')}
+  <text x="24" y="118">1</text><text x="150" y="118">${Math.ceil(dim/2)}</text><text x="282" y="118">${dim}</text></svg>`;
+}
+const opts=()=>AR.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
+let editId=null,confirmReset=false;
+const editForm=q=>`<form class="item" data-ef="${q.id}" style="display:block"><div class="f"><input type="text" name="t" required maxlength="80" value="${esc(q.t)}" aria-label="Quest name"><select name="a" aria-label="Area">${AR.map(a=>`<option value="${a[0]}" ${a[0]===q.a?'selected':''}>${a[1]}</option>`).join('')}</select><select name="x" aria-label="Difficulty">${[[10,'Easy +10'],[25,'Medium +25'],[50,'Hard +50']].map(o=>`<option value="${o[0]}" ${o[0]===q.xp?'selected':''}>${o[1]}</option>`).join('')}</select></div><p><label><input type="checkbox" name="d" ${q.daily?'checked':''}> Repeats daily</label></p><button>Save</button> <button type="button" class="alt" data-a="ec">Cancel</button></form>`;
+function setup(){
+  const p=S.profile||{name:'',values:['','',''],purpose:''};
+  $('#app').innerHTML=`${acctBar()}<h1>${S.profile?'Edit character':'Create your character'}</h1><form class="p" id="pf" style="max-width:520px;margin:auto">
+  <label class="s" for="n">Player name</label><input type="text" id="n" required maxlength="24" value="${esc(p.name)}">
+  <label class="s">Your 3 core values</label>
+  ${[0,1,2].map(i=>`<input type="text" class="v" id="v${i}" style="margin-bottom:6px" maxlength="24" value="${esc(p.values[i]||'')}" placeholder="e.g. Freedom" aria-label="Core value ${i+1}">`).join('')}
+  <label class="s" for="pu">Your purpose: why are you doing all this?</label><textarea id="pu" rows="3" maxlength="240">${esc(p.purpose)}</textarea>
+  <p><button>${S.profile?'Save':'Start game'}</button>${S.profile?' <button type="button" class="alt" id="cx">Cancel</button>':''}</p></form>`;
+  setStatus(mode==='cloud'?status:'local');wireBar();
+  const cx=$('#cx');if(cx)cx.onclick=render;
+  $('#pf').onsubmit=e=>{e.preventDefault();const first=!S.profile;S.profile={name:$('#n').value.trim(),values:[...document.querySelectorAll('.v')].map(x=>x.value.trim()).filter(Boolean),purpose:$('#pu').value.trim()};
+    if(first)S.quests=[['In bed by midnight','phys'],['Up by 9am','phys'],['Workout','phys'],['Study block','intel'],['Journal','spirit']].map(h=>({id:mkid(),t:h[0],a:h[1],xp:10,daily:1}));
+    persist();render()};
+}
+function render(){
+  if(mode!=='cloud'&&mode!=='local')return;
+  if(!S.profile)return setup();
+  const P=S.profile,tot=total(),lv=1+Math.floor(tot/100),d=td(),hl=S.hl[d]||[],en=S.en[d]||{},tx=S.dx[d]||0;
+  const daily=S.quests.filter(q=>q.daily),one=S.quests.filter(q=>!q.daily),mxx=Math.max(100,...AR.map(a=>S.xp[a[0]]||0));
+  const row=(q,done)=>q.id===editId?editForm(q):`<div class="item ${done?'done':''}"><input type="checkbox" data-a="tg" data-i="${q.id}" ${done?'checked':''} aria-label="${esc(q.t)}"><span class="t">${esc(q.t)} <span class="tag">+${q.xp} · ${AN[q.a]}</span></span><button class="alt" data-a="ed" data-i="${q.id}" aria-label="Edit ${esc(q.t)}">Edit</button> <button class="alt" data-a="rm" data-i="${q.id}" aria-label="Delete ${esc(q.t)}">×</button></div>`;
+  const bosses=S.bosses.map(b=>`<div class="item ${b.won?'won':''}" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b style="min-width:0;overflow-wrap:anywhere">${b.won?'🏆':'👹'} ${esc(b.n)}</b><span class="tag">${AN[b.a]}</span></div>${b.note?`<p class="meta">${esc(b.note)}</p>`:''}<div class="bar hp"><i style="width:${b.hp}%"></i></div><span class="meta">${b.won?'Defeated! +100 XP bonus':b.hp+' / 100 HP'}</span> ${b.won?'':`<button data-a="hit" data-i="${b.id}">Hit +15 XP</button>`} ${b.hp<100?`<button class="alt" data-a="un" data-i="${b.id}">Undo hit</button>`:''} <button class="alt" data-a="rb" data-i="${b.id}" aria-label="Delete boss">×</button></div>`).join('');
+  $('#app').innerHTML=`${acctBar()}<div class="cols">
+  <div>
+   <section class="p"><div class="lvl"><span>LEVEL ${lv}</span><span class="rank">${rank(lv)}-Rank</span></div>
+    <div class="av" id="av" tabindex="0" role="button" aria-label="Upload your portrait">${S.avatar?`<img src="${S.avatar}" alt="Your portrait">`:'<span>✦<br>Tap to add your portrait</span>'}</div>
+    <input type="file" id="fi" accept="image/*" hidden></section>
+   <section class="p"><h2>Daily energy</h2>${EN.map(e=>`<div class="en"><label for="en-${e[0]}"><span>${e[1]}</span><span id="ev-${e[0]}">${en[e[0]]??50}</span></label><input type="range" id="en-${e[0]}" data-en="${e[0]}" min="0" max="100" value="${en[e[0]]??50}"></div>`).join('')}<p class="meta">Rate how you feel today.</p></section>
+   <section class="p"><h2>Stats</h2>${AR.map(a=>`<div class="st"><span>${a[1]}</span><span>${S.xp[a[0]]||0} XP</span><div class="bar"><i style="width:${Math.min(100,(S.xp[a[0]]||0)/mxx*100)}%"></i></div></div>`).join('')}<p class="meta">Sum XP ${tot}</p></section>
+  </div>
+  <div style="min-width:0">
+   <section class="p"><h1>${esc(P.name)}</h1>${P.purpose?`<p style="text-align:center;font-style:italic">“${esc(P.purpose)}”</p>`:''}<div class="chips" style="justify-content:center;margin-bottom:10px">${P.values.map(v=>`<span class="chip">${esc(v)}</span>`).join('')}</div>${radar()}</section>
+   <section class="p"><h2>${new Date().toLocaleString('en-US',{month:'long'})}: daily XP</h2>${line()}</section>
+   <section class="p"><h2>Choose your pursuits</h2><h3 style="margin:0 0 6px;font-size:15px">Boss fights</h3>${bosses||'<p class="meta">Pick a big challenge, like an exam or a bad habit, and take it down hit by hit.</p>'}
+    <form id="bf"><div class="f"><input type="text" id="bt" required maxlength="60" placeholder="Boss name, e.g. ISYE midterm" aria-label="Boss name"><select id="ba" aria-label="Area">${opts()}</select><input type="text" id="bn" maxlength="120" placeholder="What does beating it look like?" aria-label="Challenge note"></div><p><button>Summon boss</button></p></form></section>
+  </div>
+  <div>
+   <section class="p"><h2>XP: ${tot}</h2><p class="meta">To reach level ${lv+1}, earn ${100-tot%100} more XP.</p><p class="big">${tx} <span style="font-size:16px;color:var(--mut)">XP today</span></p><div class="bar"><i style="width:${Math.min(100,tx/30*100)}%"></i></div><p class="meta">Daily goal: 30 XP</p></section>
+   <section class="p"><h2>Today’s mission</h2>${daily.map(q=>row(q,hl.includes(q.id))).join('')||'<p class="meta">Add a quest and tick “repeats daily”.</p>'}</section>
+   <section class="p"><h2>Quests</h2>${one.map(q=>row(q,q.done)).join('')||'<p class="meta">Turn a goal into a quest. Finish it to earn XP.</p>'}
+    <form id="qf"><div class="f"><input type="text" id="qt" required maxlength="80" placeholder="e.g. Apply to Create-X" aria-label="Quest name"><select id="qa" aria-label="Area">${opts()}</select><select id="qx" aria-label="Difficulty"><option value="10">Easy +10</option><option value="25">Medium +25</option><option value="50">Hard +50</option></select></div>
+    <p><label><input type="checkbox" id="qd"> Repeats daily</label></p><button>Add quest</button></form></section>
+   <details class="p" id="set" ${confirmReset?'open':''}><summary>Settings</summary>
+    <p><button class="alt" id="ep">Edit character</button> ${confirmReset?'':'<button class="alt" id="rs">Reset all</button>'}</p>
+    ${confirmReset?`<p class="meta">Delete your character and all progress${mode==='cloud'?' on every device':''}? This can’t be undone.</p><p><button id="rsy" style="background:var(--red);border-color:var(--red)">Delete everything</button> <button class="alt" id="rsn">Keep my save</button></p>`:''}
+   </details>
+  </div></div>`;
+  setStatus(mode==='cloud'?status:'local');wireBar();
+  $('#qf').onsubmit=e=>{e.preventDefault();S.quests.push({id:mkid(),t:$('#qt').value.trim(),a:$('#qa').value,xp:+$('#qx').value,daily:$('#qd').checked?1:0});persist();render()};
+  $('#bf').onsubmit=e=>{e.preventDefault();S.bosses.push({id:mkid(),n:$('#bt').value.trim(),a:$('#ba').value,note:$('#bn').value.trim(),hp:100});persist();render()};
+  $('#ep').onclick=setup;
+  if($('#rs'))$('#rs').onclick=()=>{confirmReset=true;render()};
+  if($('#rsn'))$('#rsn').onclick=()=>{confirmReset=false;render()};
+  if($('#rsy'))$('#rsy').onclick=()=>{confirmReset=false;S=blank();persist();render()};
+  const av=$('#av'),fi=$('#fi');av.onclick=()=>fi.click();av.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fi.click()}};
+  fi.onchange=()=>{const f=fi.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.avatar=c.toDataURL('image/jpeg',.8);persist();render()};im.src=r.result};r.readAsDataURL(f)};
+}
+const app=$('#app');
+app.addEventListener('input',e=>{const k=e.target.dataset.en;if(!k)return;const d=td();(S.en[d]=S.en[d]||{})[k]=+e.target.value;$('#ev-'+k).textContent=e.target.value});
+app.addEventListener('change',e=>{if(e.target.dataset.en)persist()});
+app.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,i=b.dataset.i,d=td();
+  const q=S.quests.find(x=>x.id===i),bo=S.bosses.find(x=>x.id===i);
+  if(a==='tg'&&q){if(q.daily){const l=S.hl[d]=S.hl[d]||[],k=l.indexOf(i);if(k>=0){l.splice(k,1);award(q.a,-q.xp)}else{l.push(i);award(q.a,q.xp)}}else{q.done=!q.done;award(q.a,q.done?q.xp:-q.xp)}}
+  else if(a==='rm'){S.quests=S.quests.filter(x=>x.id!==i)}
+  else if(a==='ed'){editId=i;render();return}
+  else if(a==='ec'){editId=null;render();return}
+  else if(a==='hit'&&bo){bo.hp=Math.max(0,bo.hp-20);award(bo.a,15);if(bo.hp===0&&!bo.won){bo.won=true;award(bo.a,100)}}
+  else if(a==='un'&&bo&&bo.hp<100){if(bo.won){bo.won=false;award(bo.a,-100)}bo.hp=Math.min(100,bo.hp+20);award(bo.a,-15)}
+  else if(a==='rb'){S.bosses=S.bosses.filter(x=>x.id!==i)}
+  else return;
+  persist();render();
+});
+app.addEventListener('submit',e=>{const id=e.target.dataset.ef;if(!id)return;e.preventDefault();const q=S.quests.find(x=>x.id===id);if(!q){editId=null;return render()}
+  const d=td(),f=e.target.elements,nd=f.d.checked?1:0,hl=S.hl[d]=S.hl[d]||[],was=q.daily,had=was?hl.includes(id):q.done;
+  if(had){award(q.a,-q.xp);if(was)hl.splice(hl.indexOf(id),1);else q.done=false}
+  q.t=f.t.value.trim();q.a=f.a.value;q.xp=+f.x.value;q.daily=nd;
+  if(had&&nd===was){if(nd)hl.push(id);else q.done=true;award(q.a,q.xp)}
+  editId=null;persist();render()});
+boot();
+</script>
+</body>
+</html>
