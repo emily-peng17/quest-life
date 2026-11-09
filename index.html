@@ -116,7 +116,6 @@ if(configured){const app=initializeApp(firebaseConfig);auth=getAuth(app);fs=getF
 const $=s=>document.querySelector(s);
 const AR=[['phys','Physical'],['intel','Intel'],['craft','Craft'],['wealth','Wealth'],['social','Social'],['spirit','Spiritual']];
 const AN=Object.fromEntries(AR);
-const EN=[['hp','HP'],['mood','Mood'],['conc','Concentration'],['mot','Motivation']];
 const blank=()=>({profile:null,xp:{},dx:{},en:{},quests:[],bosses:[],hl:{},log:{},avatar:'',t:0});
 let S=blank(),acct=null,docRef=null,unsub=null,mode='loading',saving=false,dirty=false,saveT=null,status='saved',remoteWaiting=false,authTab='in',authMsg='',pendingCarry=null;
 const pad=n=>String(n).padStart(2,'0'),td=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
@@ -263,8 +262,8 @@ function past(){
   const D=histDay||days[0]||'';
   let body='';
   if(D){
-    const L=dayLog(D),done=(S.hl[D]||[]).map(id=>S.quests.find(q=>q.id===id)).filter(Boolean),en=S.en[D];
-    body=`<h3 style="margin:10px 0 4px;font-size:15px">${nice(D)}</h3><p class="meta">${S.dx[D]||0} XP earned${en?' · '+EN.map(e=>`${e[1]} ${en[e[0]]??'–'}`).join(' · '):''}</p>${done.length?`<p class="meta">Daily quests done: ${done.map(q=>esc(q.t)).join(', ')}</p>`:''}${L.map(e=>logRow(e,D)).join('')||'<p class="meta">Nothing logged this day.</p>'}`;
+    const L=dayLog(D),done=(S.hl[D]||[]).map(id=>S.quests.find(q=>q.id===id)).filter(Boolean);
+    body=`<h3 style="margin:10px 0 4px;font-size:15px">${nice(D)}</h3><p class="meta">${S.dx[D]||0} XP earned</p>${done.length?`<p class="meta">Daily quests done: ${done.map(q=>esc(q.t)).join(', ')}</p>`:''}${L.map(e=>logRow(e,D)).join('')||'<p class="meta">Nothing logged this day.</p>'}`;
   }
   return`<details ${histDay?'open':''}><summary>Look back at past days</summary>${days.length?`<div class="hits">${days.map(k=>`<button class="alt" data-a="hd" data-d="${k}" aria-pressed="${k===D}">${nice(k)}</button>`).join('')}</div>`:''}<p style="margin:10px 0 0"><label class="meta" for="hd">Or pick a date</label><input type="date" id="hd" max="${today}" value="${D}"></p>${body||'<p class="meta">Your past days will show up here.</p>'}</details>`;
 }
@@ -316,7 +315,7 @@ function setup(){
 function render(){
   if(mode!=='cloud'&&mode!=='local')return;
   if(!S.profile)return setup();
-  const P=S.profile,tot=total(),lv=1+Math.floor(tot/100),d=td(),hl=S.hl[d]||[],en=S.en[d]||{},tx=S.dx[d]||0;
+  const P=S.profile,tot=total(),lv=1+Math.floor(tot/100),d=td(),hl=S.hl[d]||[],tx=S.dx[d]||0;
   const daily=S.quests.filter(q=>q.daily),one=S.quests.filter(q=>!q.daily),mxx=Math.max(100,...AR.map(a=>S.xp[a[0]]||0));
   const row=(q,done)=>q.id===editId?editForm(q):`<div class="item ${done?'done':''}"><input type="checkbox" data-a="tg" data-i="${q.id}" ${done?'checked':''} aria-label="${esc(q.t)}"><span class="t">${esc(q.t)} <span class="tag">+${q.xp} · ${AN[q.a]}</span></span><button class="alt" data-a="ed" data-i="${q.id}" aria-label="Edit ${esc(q.t)}">Edit</button> <button class="alt" data-a="rm" data-i="${q.id}" aria-label="Delete ${esc(q.t)}">×</button></div>`;
   const bosses=S.bosses.map(bossCard).join('');
@@ -325,7 +324,6 @@ function render(){
    <section class="p"><div class="lvl"><span>LEVEL ${lv}</span><span class="rank">${rank(lv)}-Rank</span></div>
     <div class="av" id="av" tabindex="0" role="button" aria-label="Upload your portrait">${S.avatar?`<img src="${S.avatar}" alt="Your portrait">`:'<span>✦<br>Tap to add your portrait</span>'}</div>
     <input type="file" id="fi" accept="image/*" hidden></section>
-   <section class="p"><h2>Daily energy</h2>${EN.map(e=>`<div class="en"><label for="en-${e[0]}"><span>${e[1]}</span><span id="ev-${e[0]}">${en[e[0]]??50}</span></label><input type="range" id="en-${e[0]}" data-en="${e[0]}" min="0" max="100" value="${en[e[0]]??50}"></div>`).join('')}<p class="meta">Rate how you feel today.</p></section>
    <section class="p"><h2>Stats</h2>${AR.map(a=>`<div class="st"><span>${a[1]}</span><span>${S.xp[a[0]]||0} XP</span><div class="bar"><i style="width:${Math.min(100,(S.xp[a[0]]||0)/mxx*100)}%"></i></div></div>`).join('')}<p class="meta">Sum XP ${tot}</p></section>
   </div>
   <div style="min-width:0">
@@ -359,8 +357,7 @@ function render(){
   fi.onchange=()=>{const f=fi.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,360/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.avatar=c.toDataURL('image/jpeg',.8);persist();render()};im.src=r.result};r.readAsDataURL(f)};
 }
 const app=$('#app');
-app.addEventListener('input',e=>{const k=e.target.dataset.en;if(!k)return;const d=td();(S.en[d]=S.en[d]||{})[k]=+e.target.value;$('#ev-'+k).textContent=e.target.value});
-app.addEventListener('change',e=>{if(e.target.dataset.en)persist();else if(e.target.id==='hd'&&e.target.value){histDay=e.target.value;render()}});
+app.addEventListener('change',e=>{if(e.target.id==='hd'&&e.target.value){histDay=e.target.value;render()}});
 app.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,i=b.dataset.i,d=td();
   const q=S.quests.find(x=>x.id===i),bo=S.bosses.find(x=>x.id===i);
